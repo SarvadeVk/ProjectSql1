@@ -1,8 +1,7 @@
-
-
 --Capstone Project
 
 CREATE DATABASE MovieGO --Database
+USE MovieGO;
 
 --******************Tables*******************
 
@@ -66,10 +65,7 @@ AS
 BEGIN
  BEGIN TRY
 	DECLARE @TicketCost DECIMAL(6,2),  @TotalAmt DECIMAL(6,2) , @tkavailable INT
-	SELECT @ShowId = ShowId FROM ShowDetails
-	SELECT @TicketCost = TicketCost FROM ShowDetails WHERE @ShowId = ShowId
-	SET @TotalAmt =  @NoOfTickets * @TicketCost
-	SELECT @tkavailable = TicketsAvailable FROM ShowDetails WHERE @ShowId= ShowId
+	
 	IF NOT EXISTS(SELECT UserId FROM Users WHERE @userId = Userid)
 	BEGIN
 		PRINT 'UserID is Invalid'
@@ -85,22 +81,31 @@ BEGIN
 		PRINT 'No of Ticekts less than or equal to zero'
 		RETURN -3
 	END
-	
+	SELECT @tkavailable = TicketsAvailable FROM ShowDetails WHERE ShowId = @ShowId
 	IF @NoOfTickets > @tkavailable
 	BEGIN
 		PRINT 'Number of Tickets is greater than Tickets Available'
 		RETURN -4
 	END
+	--SELECT @ShowId = ShowId FROM ShowDetails
+	SELECT @TicketCost = TicketCost FROM ShowDetails WHERE @ShowId = ShowId
+	SET @TotalAmt =  @NoOfTickets * @TicketCost
+
 	BEGIN
 	 BEGIN TRAN
 		INSERT INTO BookingDetails VALUES (dbo.ufn_GenerateBookingID(),@UserId,@ShowId,@NoOfTickets,@TotalAmt)
-		COMMIT TRAN
+	 COMMIT TRAN
 		PRINT 'Booking Successful'
 		RETURN 1
 	END
  END TRY
  
  BEGIN CATCH
+	SELECT ERROR_LINE() AS LINENUMBER,
+		ERROR_MESSAGE() AS ERRORMESSAGE,
+		ERROR_NUMBER() AS ERRORNUMBER,
+		ERROR_SEVERITY() AS SEVERITY,
+		ERROR_STATE() AS ERRORSTATE
 	IF @@TRANCOUNT > 0
 	ROLLBACK TRAN
 	PRINT 'Some Error'
@@ -113,8 +118,10 @@ DECLARE @RES INT
 EXEC @RES = usp_BookTheTicket 'jack_sparrow',1001,120
 SELECT @RES 
 
-SELECT TicketsAvailable,* FROM ShowDetails WHERE ShowId = 1001
+SELECT TicketsAvailable,* FROM ShowDetails --WHERE ShowId = 1001
 SELECT * FROM Users
+select * from BookingDetails
+select * from TheaterDetails
 
 /*************************************** Functions ***********************************/
 
@@ -152,7 +159,7 @@ GO
 
 --DROP FUNCTION ufn_GetMovieShowTimes
 
---SELECT * FROM ufn_GetMovieShowTimes('Hit Man','Pune')
+SELECT * FROM ufn_GetMovieShowTimes('Hit Man','Delhi')
 
 CREATE FUNCTION ufn_BookedDetails  --Inline Table Valued Function
 (
@@ -170,3 +177,11 @@ RETURN
 
 
 	
+DECLARE @nooftickets INT = 4, @ticketcost NUMERIC = 100, @totalamount NUMERIC, @tkav int = 3
+BEGIN
+	IF @tkav < @nooftickets
+		select 'no ticket available'
+	ELSE
+		set @totalamount = @nooftickets * @ticketcost
+		SELECT @totalamount 
+END
